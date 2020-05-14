@@ -19,7 +19,7 @@ dtype = {numCol: "float32" for numCol in numCols}
 dtype.update({catCol: "category" for catCol in catCols if catCol != "id"})
 
 # read the sales data
-sales_data = pd.read_csv("/media/hhew0002/f0df6edb-45fe-4416-8076-34757a0abceb/hhew0002/Academic/Competitions/M5 Competition/data/sales_train_validation.csv", usecols=catCols + numCols, dtype=dtype)
+sales_data = pd.read_csv("./data/sales_train_validation.csv", usecols=catCols + numCols, dtype=dtype)
 sales_data = sales_data.drop(columns=["item_id", "dept_id", "store_id"])
 
 
@@ -39,7 +39,7 @@ calendarDTypes = {"event_name_1": "category",
                   "snap_CA": "category",
                   'snap_TX': 'category',
                   'snap_WI': 'category' }
-calendar_data = pd.read_csv("/media/hhew0002/f0df6edb-45fe-4416-8076-34757a0abceb/hhew0002/Academic/Competitions/M5 Competition/data/calendar.csv", dtype=calendarDTypes)
+calendar_data = pd.read_csv("./data/calendar.csv", dtype=calendarDTypes)
 
 # remove the last 28 points from the calendar data
 horizon = 28
@@ -65,7 +65,7 @@ calendar_data = calendar_data.drop(columns=["date", "wm_yr_wk", "year", "weekday
 
 
 # read the price data
-price_data = pd.read_csv("/media/hhew0002/f0df6edb-45fe-4416-8076-34757a0abceb/hhew0002/Academic/Competitions/M5 Competition/data/Item-prices.txt", header=None)
+price_data = pd.read_csv("./data/Item-prices.txt", header=None)
 price_data = price_data.iloc[:,:-horizon]
 
 column_names = [f"d_{day}" for day in range(1, 1942)]
@@ -81,8 +81,7 @@ price_data_melted = pd.melt(price_data, id_vars=['id'], var_name="d", value_name
 
 
 # embed the sales data to have a lag length of 10
-data = sales_data.iloc[0:10, :]
-data = pd.melt(data, id_vars=['id', 'cat_id', 'state_id'], var_name="d", value_name="sales")
+data = pd.melt(sales_data, id_vars=['id', 'cat_id', 'state_id'], var_name="d", value_name="sales")
 
 for lags in range(1,11):
     data['lag' + str(lags)] = data[["id","sales"]].groupby("id")["sales"].shift(lags)
@@ -166,10 +165,10 @@ m_lgb.save_model("model.lgb")
 
 # create the initial testing data
 lag_size = 10
-testing_data = sales_data.iloc[0:10, -lag_size:]
-testing_data['cat_id'] = sales_data.cat_id.iloc[0:10]
-testing_data['state_id'] = sales_data.state_id.iloc[0:10]
-testing_data['id'] = sales_data.id.iloc[0:10]
+testing_data = sales_data.iloc[:, -lag_size:]
+testing_data['cat_id'] = sales_data.cat_id
+testing_data['state_id'] = sales_data.state_id
+testing_data['id'] = sales_data.id
 
 for day in range(1914, 1942):
     testing_data[f"d_{day}"] = np.nan
@@ -215,7 +214,7 @@ sub = sub.set_index(["id", "F" ]).unstack()["sales"][cols].reset_index()
 sub.fillna(0., inplace = True)
 sub.sort_values("id", inplace = True)
 sub.reset_index(drop=True, inplace = True)
-sub.to_csv("submission.csv",index=False)
+
 
 sub2 = sub.copy()
 sub2["id"] = sub2["id"].str.replace("validation$", "evaluation")
